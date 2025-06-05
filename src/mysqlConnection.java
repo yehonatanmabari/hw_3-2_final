@@ -81,10 +81,26 @@ public class mysqlConnection {
 
         // user update 
         try (Scanner scanner = new Scanner(System.in)) {
+            boolean stopUpdating = false;
             for (String flight : flights) {
-                System.out.print("Enter new arrival time for flight " + flight + " (leave blank to skip): ");
-                String newDelay = scanner.nextLine();
-                if (!newDelay.trim().isEmpty()) {
+                if (stopUpdating)
+                    break;
+
+                System.out.print("Enter new arrival time for flight " + flight + " (leave blank to skip, type 'exit' to stop all): ");
+
+                if (!scanner.hasNextLine()) {
+                    System.out.println(" No more input. Exiting flight update.");
+                    break;
+                }
+
+                String newDelay = scanner.nextLine().trim();
+
+                if (newDelay.equalsIgnoreCase("exit")) {
+                    System.out.println(" Update cancelled by user.");
+                    break;
+                }
+
+                if (!newDelay.isEmpty()) {
                     String sql = "UPDATE Flights SET delay = ? WHERE flight = ?";
                     try (PreparedStatement ps = conn.prepareStatement(sql)) {
                         ps.setString(1, newDelay);
@@ -94,10 +110,13 @@ public class mysqlConnection {
                     }
                 }
             }
+        } catch (Exception e) {
+            System.out.println(" Scanner input error: " + e.getMessage());
         }
     }
 
     // Print all current flight data
+    /*
     public static void printAllFlights(Connection conn) throws SQLException {
         String sql = "SELECT scheduled, flight, `from`, delay, terminal FROM Flights";
         try (Statement stmt = conn.createStatement();
@@ -112,7 +131,37 @@ public class mysqlConnection {
             }
         }
     }
+    */
+ // Print all current flight data to a file
+ // Print all current flight data to a file on Desktop
+    public static void printAllFlights(Connection conn) throws SQLException {
+        String sql = "SELECT scheduled, flight, `from`, delay, terminal FROM Flights";
+
+        // נתיב לקובץ על שולחן העבודה של המשתמש הנוכחי
+        String desktopPath = System.getProperty("user.home") + "/Desktop/flights_output.txt";
+
+        System.out.println(">> Starting to write flight data to file at: " + desktopPath);
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql);
+             java.io.PrintWriter writer = new java.io.PrintWriter(desktopPath)) {
+
+            writer.println("Final list of Flights:");
+
+            while (rs.next()) {
+                writer.println("Scheduled: " + rs.getString("scheduled") +
+                        ", Flight: " + rs.getString("flight") +
+                        ", From: " + rs.getString("from") +
+                        ", Delay: " + rs.getString("delay") +
+                        ", Terminal: " + rs.getString("terminal"));
+            }
+
+            System.out.println("Flight data successfully written to: " + desktopPath);
+
+        } catch (Exception e) {
+            System.out.println(" Error writing to file: " + e.getMessage());
+        }
+    }
+    
+    
 }
-
-
-
